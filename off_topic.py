@@ -296,9 +296,10 @@ class ChatWindow(Screen):
         Args:
             event (Tree.NodeSelected): The event object containing information about the selected node.
         """
-        self.SELECTED_TOPIC = str(event.node.label)
-        self.SELECTED_NODE = event.node
-        self.text_area.load_text(self.MESSAGES.get(self.SELECTED_TOPIC, ""))
+        if validate_topic(event.node.label):
+            self.SELECTED_TOPIC = str(event.node.label)
+            self.SELECTED_NODE = event.node
+            self.text_area.load_text(self.MESSAGES.get(self.SELECTED_TOPIC, ""))
 
     @on(Button.Pressed, '#create_topic_btn')
     def create(self) -> None:
@@ -308,7 +309,7 @@ class ChatWindow(Screen):
     @on(Button.Pressed, '#send_btn')
     def send(self, event: Button.Pressed) -> None:
         """Handle the button press event to send a message."""
-        if self.SELECTED_TOPIC:
+        if validate_topic(self.SELECTED_TOPIC):
             message = str(self.input_area.text)
             chat_management.send_message_to_topic(self.SELECTED_TOPIC, self.user_name, message)
             self.input_area.clear()
@@ -332,7 +333,8 @@ class ChatWindow(Screen):
             
     
 
-
+def validate_topic(topic:str)->bool:
+    return topic is not None and topic != 'Topics'
        
 class Off_Topic(App):
     logo = '''

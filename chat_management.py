@@ -14,7 +14,9 @@ logger.addHandler(handler)
 import os
 
 
-# Kafka broker configuration
+#------------------------------->
+#       Kafka Configurations
+#------------------------------->
 # Define the name of the environment variable
 env_variable_name = "OTBROKER"
 
@@ -28,7 +30,6 @@ else:
     
 num_partitions = 1
 replication_factor = 1
-admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
 
 USER_NAME_PREFIX = 'OTUser__'
 GROUP_NAME_PREFIX = 'OTGroup__'
@@ -40,9 +41,38 @@ def filter_strings_by_starting_substring(strings, substring):
     """Filter strings based on starting substring."""
     return [s.replace(substring, '') for s in strings if substring in s]
 
+
+
+#------------------------------->
+#       Kafka Admin Client
+#------------------------------->
+admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
+
 #------------------------------->
 #       Kafka Methods
 #------------------------------->
+def get_all_topics():
+    """Retrieve all topic names."""
+    # Retrieve metadata about all topics
+    topics = admin_client.list_topics()
+    return filter_strings_by_starting_substring(topics, "OTGroup__")
+
+def create_topic(topic_name):
+    """Create a Kafka topic."""
+    # Create a topic with the user's name
+    topic_name = f"{GROUP_NAME_PREFIX}{topic_name}"
+    current_topics = get_all_topics()
+    if topic_name in current_topics:
+        error = f"Topic {topic_name} already exists"
+        logger.error(f"Topic {topic_name} already exists")
+        return False, error
+    else:
+        new_topic = NewTopic(topic_name, num_partitions, replication_factor)
+        admin_client.create_topics([new_topic])
+        logger.info(f"Topic {topic_name} created successfully.")
+        return True, None
+    
+
 def send_message_to_topic(topic, username, message):
     """Send a message to a Kafka topic."""
     # Configure Kafka producer
@@ -93,36 +123,13 @@ def get_msgs_for_topic(topic, username):
         else:
             return None
 
-def create_topic(topic_name):
-    """Create a Kafka topic."""
-    # Create a topic with the user's name
-    topic_name = f"{GROUP_NAME_PREFIX}{topic_name}"
-    current_topics = get_all_topics()
-    if topic_name in current_topics:
-        error = f"Topic {topic_name} already exists"
-        logger.error(f"Topic {topic_name} already exists")
-        return False, error
-    else:
-        new_topic = NewTopic(topic_name, num_partitions, replication_factor)
-        admin_client.create_topics([new_topic])
-        logger.info(f"Topic {topic_name} created successfully.")
-        return True, None
-
-def get_all_topics():
-    """Retrieve all topic names."""
-    # Create KafkaAdminClient instance
-    admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
-    # Retrieve metadata about all topics
-    topics = admin_client.list_topics()
-    return filter_strings_by_starting_substring(topics, "OTGroup__")
-
 def remove_topic(topic):
     """Remove a Kafka topic."""
-    # Create KafkaAdminClient instance
-    admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
     # Delete the topic
     admin_client.delete_topics([f"{GROUP_NAME_PREFIX}{topic}"])
     logger.info(f"Topic '{topic}' removed successfully.")
+
+
 
 
 if __name__ == "__main__":
